@@ -1,0 +1,269 @@
+<?php
+// Set timezone to Thailand
+date_default_timezone_set('Asia/Bangkok');
+
+// Format current date in Thai
+$thaiMonths = [
+    1 => 'มกราคม',
+    2 => 'กุมภาพันธ์',
+    3 => 'มีนาคม',
+    4 => 'เมษายน',
+    5 => 'พฤษภาคม',
+    6 => 'มิถุนายน',
+    7 => 'กรกฎาคม',
+    8 => 'สิงหาคม',
+    9 => 'กันยายน',
+    10 => 'ตุลาคม',
+    11 => 'พฤศจิกายน',
+    12 => 'ธันวาคม'
+];
+
+$day = date('d');
+$month = $thaiMonths[(int)date('m')];
+$year = date('Y') + 543;
+$currentDate = "$day $month $year";
+
+// เพิ่มฟังก์ชันสำหรับตรวจสอบปีงบประมาณ
+function getFiscalYear($date) {
+    $month = (int)date('m', strtotime($date));
+    $year = (int)date('Y', strtotime($date));
+    if ($month >= 10) {
+        return $year + 1; // เปลี่ยนเป็นปีถัดไปสำหรับเดือน ต.ค.-ธ.ค.
+    } else {
+        return $year; // ปีปัจจุบันสำหรับเดือน ม.ค.-ก.ย.
+    }
+}
+
+// เพิ่มการเลือกปีงบประมาณ
+$current_fiscal_year = isset($_GET['fiscal_year']) ? (int)$_GET['fiscal_year'] : getFiscalYear(date('Y-m-d'));
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.2.0/remixicon.css">
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.4.1/css/responsive.bootstrap5.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <link rel="stylesheet" href="assets/css/table.css">
+
+    <title>สถานะการลา</title>
+</head>
+
+<body>
+    <?php include('component/sidebar.php'); ?>
+
+    <main class="main container3" id="main">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">ประวัติการลา</h3>
+                <p class="card-text mt-2 mb-0">วันที่ปัจจุบัน: <?php echo $currentDate; ?></p>
+                <p class="card-text mb-0">ปีงบประมาณ: <?php 
+                    $selected_year = isset($_GET['fiscal_year']) ? (int)$_GET['fiscal_year'] : $current_fiscal_year;
+                    echo $selected_year . ' (1 ต.ค. ' . ($selected_year) . ' - 30 ก.ย. ' . ($selected_year + 1) . ')'; 
+                ?></p>
+                
+                <!-- เพิ่มตัวเลือกปีงบประมาณ -->
+                <div class="mt-3">
+                    <form method="get" class="d-flex align-items-center">
+                        <label for="fiscal_year" class="me-2">ปีงบประมาณ:</label>
+                        <select name="fiscal_year" id="fiscal_year" class="form-select" style="width: auto;" onchange="this.form.submit()">
+                            <?php
+                            // คำนวณปีงบประมาณปัจจุบัน
+                            $current_fiscal_year = getFiscalYear(date('Y-m-d'));
+                            
+                            // แสดงตัวเลือกย้อนหลัง 5 ปี จนถึงปีปัจจุบัน
+                            $start_year = $current_fiscal_year - 5;
+                            $end_year = $current_fiscal_year;
+                            
+                            for ($year = $end_year; $year >= $start_year; $year--) {
+                                $selected = ($year == (isset($_GET['fiscal_year']) ? (int)$_GET['fiscal_year'] : $current_fiscal_year)) ? 'selected' : '';
+                                echo "<option value=\"$year\" $selected>$year</option>";
+                            }
+                            ?>
+                        </select>
+                    </form>
+                </div>
+            </div>
+            <div class="card-body">
+                <table id="statusTable" class="table table-striped table-bordered dt-responsive nowrap" style="width:100%">
+                    <thead>
+                        <tr>
+                            <th>ลำดับ</th>
+                            <th>ชื่อ-นามสกุล</th>
+                            <th>ประเภทการลา</th>
+                            <th>วันที่เริ่มลา</th>
+                            <th>วันที่สิ้นสุด</th>
+                            <th>จำนวนวัน</th>
+                            <th>พิมพ์</th>
+                            <th>ไฟล์</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php
+                        include('conn/conn.php');
+                        // แก้ไข SQL query เพื่อกรองตามปีงบประมาณ
+                        $selected_year = isset($_GET['fiscal_year']) ? (int)$_GET['fiscal_year'] : $current_fiscal_year;
+                        $fiscal_start = ($selected_year - 1) . '-10-01';
+                        $fiscal_end = $selected_year . '-09-30';
+                        
+                        $sql_status = "SELECT leaves.*, CONCAT(pr.prefixname, e.fname, ' ', e.lname) as fullname, leavetype.leavetypename, leaves.file 
+                                   FROM leaves
+                                   LEFT JOIN employees e ON leaves.employeesid = e.id
+                                   LEFT JOIN prefix pr ON e.prefix = pr.prefixid
+                                   LEFT JOIN leavetype ON leaves.leavetype = leavetype.leavetypeid
+                                   WHERE leaves.leavestatus ='อนุมัติ' 
+                                   AND leaves.note='ลา'
+                                   AND leaves.leavestart BETWEEN '$fiscal_start' AND '$fiscal_end'
+                                   ORDER BY e.fname ASC, e.lname ASC, 
+                                          YEAR(leaves.leavestart) ASC, 
+                                          MONTH(leaves.leavestart) ASC, 
+                                          DAY(leaves.leavestart) ASC";
+                        $result_status = mysqli_query($conn, $sql_status);
+                        $i = 1;
+                        while ($row = mysqli_fetch_assoc($result_status)) {
+                        ?>
+                            <tr>
+                                <td><?php echo $i++; ?></td>
+
+
+                                <td><?php echo $row['fullname']; ?></td>
+
+                                <td><?php echo $row['leavetypename']; ?></td>
+                                <td><?php echo date('d/m/Y', strtotime($row['leavestart'])); ?></td>
+                                <td><?php echo date('d/m/Y', strtotime($row['leaveend'])); ?></td>
+                                <td><?php
+                                    $start = new DateTime($row['leavestart']);
+                                    $end = new DateTime($row['leaveend']);
+                                    $interval = new DateInterval('P1D');
+                                    $daterange = new DatePeriod($start, $interval, $end->modify('+1 day'));
+
+                                    $workdays = 0;
+                                    // Get holidays from database
+                                    $sql_holidays = "SELECT holidayday FROM holiday";
+                                    $result_holidays = $conn->query($sql_holidays);
+                                    $holidays = [];
+
+                                    if ($result_holidays) {
+                                        while ($holiday = $result_holidays->fetch_assoc()) {
+                                            $holidays[] = $holiday['holidayday'];
+                                        }
+                                    }
+
+                                    foreach ($daterange as $date) {
+                                        // Check if it's a weekday (1-5) AND not a holiday
+                                        if ($date->format('N') < 6 && !in_array($date->format('Y-m-d'), $holidays)) {
+                                            $workdays++;
+                                        }
+                                    }
+                                    echo $workdays;
+                                    ?>
+                                </td>
+                                <td>
+                                    <?php
+                                    if ($row['leavestatus'] == 'อนุมัติ') {
+                                    ?>
+                                        <a href="print_leave.php?leavesid=<?php echo $row['leavesid']; ?>" class="btn btn-primary btn-sm" target="_blank">
+                                            <i class="ri-printer-line"></i> พิมพ์
+                                        </a>
+                                    <?php
+                                    }
+                                    ?>
+                                </td>
+                                <td>
+                                <?php if (!empty($row['file'])) : ?>
+                                        <a href="javascript:void(0)" onclick="showFilePreview('../uploads/leaves/<?php echo urlencode($row['file']); ?>')" class="btn btn-info btn-sm">
+                                            <i class="ri-file-line"></i> ดูไฟล์
+                                        </a>
+                                    <?php else : ?>
+                                        -
+                                    <?php endif; ?>
+                                </td>
+                                </td>
+
+                            </tr>
+                        <?php } ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <?php include('component/footer.php'); ?>
+    </main>
+
+    <script src="assets/js/main.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.4.1/js/dataTables.responsive.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.4.1/js/responsive.bootstrap5.min.js"></script>
+
+    <script>
+        $(document).ready(function() {
+            $('#statusTable').DataTable({
+                responsive: true,
+                language: {
+                    url: 'assets/js/datatable-lang/th.json'
+                }
+            });
+        });
+    </script>
+           <script>
+        function showFilePreview(fileUrl) {
+            const fileExt = fileUrl.split('.').pop().toLowerCase();
+            
+            if(['jpg', 'jpeg', 'png', 'gif'].includes(fileExt)) {
+                // สำหรับรูปภาพะ
+                Swal.fire({
+                    imageUrl: fileUrl,
+                    imageAlt: 'ไฟล์แนบ',
+                    width: 'auto',
+                    maxWidth: '95%',
+                    customClass: {
+                        popup: 'swal-image-popup',
+                        image: 'swal-responsive-image'
+                    },
+                    confirmButtonText: 'ปิด'
+                });
+            } else if(fileExt === 'pdf') {
+                // สำหรับไฟล์ PDF
+                window.open(fileUrl, '_blank');
+            } else if(['doc', 'docx'].includes(fileExt)) {
+                // สำหรับไฟล์ Word ให้ดาวน์โหลดไฟล์แทน
+                Swal.fire({
+                    title: 'ดาวน์โหลดไฟล์',
+                    text: 'คลิกปุ่มดาวน์โหลดเพื่อเปิดไฟล์ Word',
+                    icon: 'info',
+                    showCancelButton: true,
+                    confirmButtonText: 'ดาวน์โหลด',
+                    cancelButtonText: 'ยกเลิก'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        window.location.href = fileUrl;
+                    }
+                });
+            } else {
+                // สำหรับไฟล์ประเภทอื่นๆ ให้ดาวน์โหลด
+                window.location.href = fileUrl;
+            }
+        }
+    </script>
+    <style>
+        .swal-image-popup {
+            padding: 10px !important;
+        }
+        .swal-responsive-image {
+            max-width: 100% !important;
+            max-height: 80vh !important;
+            width: auto !important;
+            height: auto !important;
+            object-fit: contain;
+        }
+    </style>
+</body>
+
+</html>

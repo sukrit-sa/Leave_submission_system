@@ -1,0 +1,23 @@
+<div class="modal fade" id="editStaffStatusModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">แก้ไขสถานะงาน</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editStaffStatusForm">
+                <div class="modal-body">
+                    <input type="hidden" name="staffid" id="edit_staffid">
+                    <div class="mb-3">
+                        <label class="form-label">สถานะงาน</label>
+                        <input type="text" class="form-control" name="staffname" id="edit_staffname" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-danger" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="btn btn-outline-primary">บันทึก</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

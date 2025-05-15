@@ -1,0 +1,20 @@
+[29-Apr-2025 14:05:40 Asia/Bangkok] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'send_cancel' in 'field list' in C:\nginx\html\trainning\laragon\www\user\process\process_cancel_leave.php:96
+Stack trace:
+#0 C:\nginx\html\trainning\laragon\www\user\process\process_cancel_leave.php(96): mysqli->prepare('UPDATE leaves S...')
+#1 {main}
+  thrown in C:\nginx\html\trainning\laragon\www\user\process\process_cancel_leave.php on line 96
+[29-Apr-2025 14:05:48 Asia/Bangkok] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'send_cancel' in 'field list' in C:\nginx\html\trainning\laragon\www\user\process\process_cancel_leave.php:96
+Stack trace:
+#0 C:\nginx\html\trainning\laragon\www\user\process\process_cancel_leave.php(96): mysqli->prepare('UPDATE leaves S...')
+#1 {main}
+  thrown in C:\nginx\html\trainning\laragon\www\user\process\process_cancel_leave.php on line 96
+[29-Apr-2025 14:06:45 Asia/Bangkok] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'send_cancel' in 'field list' in C:\nginx\html\trainning\laragon\www\user\process\process_cancel_leave.php:96
+Stack trace:
+#0 C:\nginx\html\trainning\laragon\www\user\process\process_cancel_leave.php(96): mysqli->prepare('UPDATE leaves S...')
+#1 {main}
+  thrown in C:\nginx\html\trainning\laragon\www\user\process\process_cancel_leave.php on line 96
+[29-Apr-2025 14:06:48 Asia/Bangkok] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'send_cancel' in 'field list' in C:\nginx\html\trainning\laragon\www\user\process\process_cancel_leave.php:96
+Stack trace:
+#0 C:\nginx\html\trainning\laragon\www\user\process\process_cancel_leave.php(96): mysqli->prepare('UPDATE leaves S...')
+#1 {main}
+  thrown in C:\nginx\html\trainning\laragon\www\user\process\process_cancel_leave.php on line 96
